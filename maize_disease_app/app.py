@@ -861,7 +861,7 @@ def create_home_page():
     
     # Create a demo results section
     demo_col1, demo_col2 = st.columns(2)
-    
+  # this app menatt to be deplyed using using streamlit clude.  
     with demo_col1:
         st.markdown("""
         <div style="background: #fff; padding: 1.5rem; border-radius: 15px; box-shadow: 0 4px 20px rgba(0,0,0,0.1); margin-bottom: 1rem;">

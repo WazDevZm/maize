@@ -1,6 +1,7 @@
 streamlit>=1.50.0
 ultralytics>=8.0.0
-opencv-python>=4.8.0
+# Use headless build to avoid libGL errors on Streamlit Cloud
+opencv-python-headless==4.8.1.78
 pillow>=9.0.0
 numpy>=1.21.0
 plotly>=5.0.0
