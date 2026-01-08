@@ -15,6 +15,7 @@ import {
   HistoryScreen,
   InfoScreen,
   DetectionResultScreen,
+  FarmTrackerScreen,
 } from './src/screens';
 
 // Import theme and types
@@ -34,6 +35,9 @@ function MainTabs({ user }: { user: User | null }): React.JSX.Element {
           switch (route.name) {
             case 'Home':
               iconName = focused ? 'home' : 'home-outline';
+              break;
+            case 'FarmTracker':
+              iconName = focused ? 'leaf' : 'leaf-outline';
               break;
             case 'Camera':
               iconName = focused ? 'camera' : 'camera-outline';
@@ -72,6 +76,12 @@ function MainTabs({ user }: { user: User | null }): React.JSX.Element {
         options={{ tabBarLabel: 'Dashboard' }}
       >
         {() => <HomeScreen user={user} />}
+      </Tab.Screen>
+      <Tab.Screen 
+        name="FarmTracker" 
+        options={{ tabBarLabel: 'Farm Tracker' }}
+      >
+        {() => <FarmTrackerScreen user={user} />}
       </Tab.Screen>
       <Tab.Screen 
         name="Camera" 

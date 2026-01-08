@@ -81,6 +81,7 @@ export type RootStackParamList = {
   History: undefined;
   Info: undefined;
   UploadImage: undefined;
+  FarmTracker: undefined;
   DetectionResult: {
     image: string;
     result: DetectionResult;
