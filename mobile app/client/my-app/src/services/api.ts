@@ -1,7 +1,7 @@
 import { DetectionApiResponse, ApiResponse, HistoryItem } from '../types';
 
 // API Configuration
-const API_BASE_URL = __DEV__ ? 'http://localhost:8000' : 'https://your-production-api.com';
+const API_BASE_URL = __DEV__ ? 'http://10.0.2.2:8000' : 'https://your-production-api.com'; // Use 10.0.2.2 for Android emulator
 const API_TIMEOUT = 30000; // 30 seconds
 
 class ApiService {

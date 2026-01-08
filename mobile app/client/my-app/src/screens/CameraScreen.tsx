@@ -104,7 +104,7 @@ const CameraScreen: React.FC = () => {
       } as any);
 
       // Call the FastAPI backend
-      const response = await fetch('http://localhost:8000/detect', {
+      const response = await fetch('http://10.0.2.2:8000/detect', {
         method: 'POST',
         body: formData,
         headers: {
