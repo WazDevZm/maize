@@ -159,7 +159,7 @@ def load_model():
     """Load the trained YOLO model"""
     try:
         # Path to the best model weights
-        model_path = Path("G:/maize_annotations/dataset_split/runs/train_20251010_201550/weights/best.pt")
+        model_path = Path("best.pt")
         
         if not model_path.exists():
             st.error(f"❌ Model not found at: {model_path}")
