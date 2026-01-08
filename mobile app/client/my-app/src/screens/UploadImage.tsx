@@ -19,25 +19,22 @@ import {
 } from 'react-native-paper';
 import * as ImagePicker from 'expo-image-picker';
 import * as DocumentPicker from 'expo-document-picker';
+import * as FileSystem from 'expo-file-system';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Animatable from 'react-native-animatable';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
-import * as FileSystem from 'expo-file-system';
+import type { StackNavigationProp } from '@react-navigation/stack';
 
 import { theme } from '../theme/theme';
+import { RootStackParamList, UploadedImage } from '../types';
 
 const { width, height } = Dimensions.get('window');
 
-interface UploadedImage {
-  uri: string;
-  name: string;
-  size: number;
-  type: string;
-}
+type UploadImageScreenNavigationProp = StackNavigationProp<RootStackParamList, 'UploadImage'>;
 
 const UploadImageScreen: React.FC = () => {
-  const navigation = useNavigation();
+  const navigation = useNavigation<UploadImageScreenNavigationProp>();
   
   const [selectedImages, setSelectedImages] = useState<UploadedImage[]>([]);
   const [isUploading, setIsUploading] = useState(false);
@@ -59,7 +56,7 @@ const UploadImageScreen: React.FC = () => {
         const uploadedImage: UploadedImage = {
           uri: asset.uri,
           name: asset.fileName || 'image.jpg',
-          size: fileInfo.size || 0,
+          size: fileInfo.exists && !fileInfo.isDirectory ? (fileInfo as any).size || 0 : 0,
           type: asset.type || 'image/jpeg',
         };
 
@@ -87,7 +84,7 @@ const UploadImageScreen: React.FC = () => {
           images.push({
             uri: asset.uri,
             name: asset.fileName || `image_${Date.now()}.jpg`,
-            size: fileInfo.size || 0,
+            size: fileInfo.exists && !fileInfo.isDirectory ? (fileInfo as any).size || 0 : 0,
             type: asset.type || 'image/jpeg',
           });
         }
@@ -223,17 +220,17 @@ const UploadImageScreen: React.FC = () => {
       
       // Navigate to batch results or single result
       if (results.length === 1) {
-        navigation.navigate('DetectionResult' as never, {
+        navigation.navigate('DetectionResult', {
           image: results[0].image,
           result: results[0].result,
-        } as never);
+        });
       } else {
         // For multiple images, you might want to create a batch results screen
         Alert.alert(
           'Batch Analysis Complete',
           `Analyzed ${results.length} images successfully`,
           [
-            { text: 'View History', onPress: () => navigation.navigate('History' as never) },
+            { text: 'View History', onPress: () => navigation.navigate('History') },
             { text: 'OK' },
           ]
         );

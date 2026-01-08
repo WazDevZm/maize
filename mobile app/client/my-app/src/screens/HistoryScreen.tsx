@@ -24,25 +24,17 @@ import { LinearGradient } from 'expo-linear-gradient';
 import * as Animatable from 'react-native-animatable';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
+import type { StackNavigationProp } from '@react-navigation/stack';
 
 import { theme } from '../theme/theme';
+import { RootStackParamList, HistoryItem } from '../types';
 
 const { width } = Dimensions.get('window');
 
-interface HistoryItem {
-  id: string;
-  date: string;
-  time: string;
-  image: string;
-  result: string;
-  confidence: number;
-  severity: 'None' | 'Low' | 'Medium' | 'High';
-  treatment: string;
-  location?: string;
-}
+type HistoryScreenNavigationProp = StackNavigationProp<RootStackParamList, 'History'>;
 
 const HistoryScreen: React.FC = () => {
-  const navigation = useNavigation();
+  const navigation = useNavigation<HistoryScreenNavigationProp>();
   const [searchQuery, setSearchQuery] = useState('');
   const [refreshing, setRefreshing] = useState(false);
   const [filterMenuVisible, setFilterMenuVisible] = useState(false);
@@ -191,7 +183,7 @@ const HistoryScreen: React.FC = () => {
   };
 
   const handleItemPress = (item: HistoryItem) => {
-    navigation.navigate('DetectionResult' as never, {
+    navigation.navigate('DetectionResult', {
       image: item.image,
       result: {
         class: item.result,
@@ -200,7 +192,7 @@ const HistoryScreen: React.FC = () => {
         treatment: item.treatment,
       },
       fromHistory: true,
-    } as never);
+    });
   };
 
   const handleDeleteItem = (id: string) => {
@@ -427,7 +419,7 @@ const HistoryScreen: React.FC = () => {
       <FAB
         icon="camera"
         style={styles.fab}
-        onPress={() => navigation.navigate('Camera' as never)}
+        onPress={() => navigation.navigate('Camera')}
         label="New Scan"
       />
 

@@ -17,32 +17,29 @@ import {
   Chip,
   IconButton,
 } from 'react-native-paper';
-import { Camera, CameraType, FlashMode } from 'expo-camera';
+import { Camera, CameraView, CameraType, FlashMode } from 'expo-camera';
 import * as ImagePicker from 'expo-image-picker';
 import * as FileSystem from 'expo-file-system';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Animatable from 'react-native-animatable';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
+import type { StackNavigationProp } from '@react-navigation/stack';
 
 import { theme } from '../theme/theme';
+import { RootStackParamList, DetectionResult } from '../types';
 
 const { width, height } = Dimensions.get('window');
 
-interface DetectionResult {
-  class: string;
-  confidence: number;
-  severity: string;
-  treatment: string;
-}
+type CameraScreenNavigationProp = StackNavigationProp<RootStackParamList, 'Camera'>;
 
 const CameraScreen: React.FC = () => {
-  const navigation = useNavigation();
-  const cameraRef = useRef<Camera>(null);
+  const navigation = useNavigation<CameraScreenNavigationProp>();
+  const cameraRef = useRef<CameraView>(null);
   
   const [hasPermission, setHasPermission] = useState<boolean | null>(null);
-  const [cameraType, setCameraType] = useState(CameraType.back);
-  const [flashMode, setFlashMode] = useState(FlashMode.off);
+  const [cameraType, setCameraType] = useState<CameraType>('back');
+  const [flashMode, setFlashMode] = useState<FlashMode>('off');
   const [capturedImage, setCapturedImage] = useState<string | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [detectionResult, setDetectionResult] = useState<DetectionResult | null>(null);
@@ -123,23 +120,23 @@ const CameraScreen: React.FC = () => {
           setDetectionResult({
             class: prediction.class,
             confidence: prediction.confidence * 100,
-            severity: prediction.disease_info?.severity || 'Unknown',
+            severity: prediction.disease_info?.severity as 'None' | 'Low' | 'Medium' | 'High' || 'None',
             treatment: prediction.disease_info?.treatment || 'No treatment information available',
           });
         } else {
           setDetectionResult({
             class: 'Healthy',
             confidence: 95,
-            severity: 'None',
+            severity: 'None' as const,
             treatment: 'Continue current care practices',
           });
         }
 
         // Navigate to results screen
-        navigation.navigate('DetectionResult' as never, {
+        navigation.navigate('DetectionResult', {
           image: capturedImage,
-          result: detectionResult,
-        } as never);
+          result: detectionResult!,
+        });
       } else {
         throw new Error('Detection failed');
       }
@@ -151,19 +148,19 @@ const CameraScreen: React.FC = () => {
         {
           class: 'Healthy',
           confidence: 98.5,
-          severity: 'None',
+          severity: 'None' as const,
           treatment: 'Continue current care practices',
         },
         {
           class: 'Grey Leaf Spots',
           confidence: 94.2,
-          severity: 'Medium',
+          severity: 'Medium' as const,
           treatment: 'Apply fungicides, improve air circulation, remove infected leaves',
         },
         {
           class: 'Leaf Blight',
           confidence: 91.8,
-          severity: 'High',
+          severity: 'High' as const,
           treatment: 'Apply copper-based fungicides, improve drainage, crop rotation',
         },
       ];
@@ -172,10 +169,10 @@ const CameraScreen: React.FC = () => {
       setDetectionResult(randomResult);
 
       // Navigate to results screen
-      navigation.navigate('DetectionResult' as never, {
+      navigation.navigate('DetectionResult', {
         image: capturedImage,
         result: randomResult,
-      } as never);
+      });
     } finally {
       setIsAnalyzing(false);
     }
@@ -189,13 +186,13 @@ const CameraScreen: React.FC = () => {
 
   const toggleCameraType = () => {
     setCameraType(
-      cameraType === CameraType.back ? CameraType.front : CameraType.back
+      cameraType === 'back' ? 'front' : 'back'
     );
   };
 
   const toggleFlash = () => {
     setFlashMode(
-      flashMode === FlashMode.off ? FlashMode.on : FlashMode.off
+      flashMode === 'off' ? 'on' : 'off'
     );
   };
 
@@ -211,7 +208,7 @@ const CameraScreen: React.FC = () => {
   if (hasPermission === false) {
     return (
       <View style={styles.centerContainer}>
-        <Ionicons name="camera-off" size={64} color="#ccc" />
+        <Ionicons name="camera-outline" size={64} color="#ccc" />
         <Text style={styles.noPermissionText}>No access to camera</Text>
         <Button
           mode="contained"
@@ -246,11 +243,11 @@ const CameraScreen: React.FC = () => {
       {/* Camera or Image Preview */}
       <View style={styles.cameraContainer}>
         {showCamera && !capturedImage ? (
-          <Camera
+          <CameraView
             ref={cameraRef}
             style={styles.camera}
-            type={cameraType}
-            flashMode={flashMode}
+            facing={cameraType}
+            flash={flashMode}
           >
             {/* Camera Overlay */}
             <View style={styles.cameraOverlay}>
@@ -261,7 +258,7 @@ const CameraScreen: React.FC = () => {
                   onPress={toggleFlash}
                 >
                   <Ionicons
-                    name={flashMode === FlashMode.on ? 'flash' : 'flash-off'}
+                    name={flashMode === 'on' ? 'flash' : 'flash-off'}
                     size={24}
                     color="white"
                   />
@@ -307,7 +304,7 @@ const CameraScreen: React.FC = () => {
                 <View style={styles.placeholder} />
               </View>
             </View>
-          </Camera>
+          </CameraView>
         ) : (
           <View style={styles.imagePreview}>
             {capturedImage && (

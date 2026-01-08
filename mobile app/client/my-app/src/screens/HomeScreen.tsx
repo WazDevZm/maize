@@ -21,22 +21,21 @@ import { LinearGradient } from 'expo-linear-gradient';
 import * as Animatable from 'react-native-animatable';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
+import type { StackNavigationProp } from '@react-navigation/stack';
 
 import { theme } from '../theme/theme';
+import { User, RootStackParamList } from '../types';
 
 const { width } = Dimensions.get('window');
 
 interface HomeScreenProps {
-  user?: {
-    name: string;
-    email: string;
-    farmName?: string;
-    avatar?: string;
-  };
+  user?: User | null;
 }
 
+type HomeScreenNavigationProp = StackNavigationProp<RootStackParamList, 'Home'>;
+
 const HomeScreen: React.FC<HomeScreenProps> = ({ user }) => {
-  const navigation = useNavigation();
+  const navigation = useNavigation<HomeScreenNavigationProp>();
   const [refreshing, setRefreshing] = useState(false);
   const [recentDetections, setRecentDetections] = useState([
     {
@@ -81,15 +80,15 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ user }) => {
   }, []);
 
   const handleQuickScan = () => {
-    navigation.navigate('Camera' as never);
+    navigation.navigate('Camera');
   };
 
   const handleViewHistory = () => {
-    navigation.navigate('History' as never);
+    navigation.navigate('History');
   };
 
   const handleViewDiseaseInfo = () => {
-    navigation.navigate('Info' as never);
+    navigation.navigate('Info');
   };
 
   const getSeverityColor = (severity: string) => {

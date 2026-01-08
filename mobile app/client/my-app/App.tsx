@@ -8,32 +8,27 @@ import { Ionicons } from '@expo/vector-icons';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 // Import screens
-import AuthScreen from './src/screens/AuthScreen';
-import HomeScreen from './src/screens/HomeScreen';
-import CameraScreen from './src/screens/CameraScreen';
-import HistoryScreen from './src/screens/HistoryScreen';
-import InfoScreen from './src/screens/InfoScreen';
-import DetectionResultScreen from './src/screens/DetectionResultScreen';
+import {
+  AuthScreen,
+  HomeScreen,
+  CameraScreen,
+  HistoryScreen,
+  InfoScreen,
+  DetectionResultScreen,
+} from './src/screens';
 
-// Import theme
+// Import theme and types
 import { theme } from './src/theme/theme';
+import { User } from './src/types';
 
 const Tab = createBottomTabNavigator();
 const Stack = createStackNavigator();
 
-interface User {
-  id: string;
-  name: string;
-  email: string;
-  farmName?: string;
-  avatar?: string;
-}
-
-function MainTabs(): JSX.Element {
+function MainTabs({ user }: { user: User | null }): React.JSX.Element {
   return (
     <Tab.Navigator
-      screenOptions={({ route }) => ({
-        tabBarIcon: ({ focused, color, size }) => {
+      screenOptions={({ route }: { route: any }) => ({
+        tabBarIcon: ({ focused, color, size }: { focused: boolean; color: string; size: number }) => {
           let iconName: keyof typeof Ionicons.glyphMap;
 
           switch (route.name) {
@@ -74,9 +69,10 @@ function MainTabs(): JSX.Element {
     >
       <Tab.Screen 
         name="Home" 
-        component={HomeScreen}
         options={{ tabBarLabel: 'Dashboard' }}
-      />
+      >
+        {() => <HomeScreen user={user} />}
+      </Tab.Screen>
       <Tab.Screen 
         name="Camera" 
         component={CameraScreen}
@@ -96,15 +92,11 @@ function MainTabs(): JSX.Element {
   );
 }
 
-export default function App(): JSX.Element {
+export default function App(): React.JSX.Element {
   const [user, setUser] = useState<User | null>(null);
 
   const handleLogin = (userData: User) => {
     setUser(userData);
-  };
-
-  const handleLogout = () => {
-    setUser(null);
   };
 
   return (
@@ -116,7 +108,9 @@ export default function App(): JSX.Element {
             <AuthScreen onLogin={handleLogin} />
           ) : (
             <Stack.Navigator screenOptions={{ headerShown: false }}>
-              <Stack.Screen name="Main" component={MainTabs} />
+              <Stack.Screen name="Main">
+                {() => <MainTabs user={user} />}
+              </Stack.Screen>
               <Stack.Screen 
                 name="DetectionResult" 
                 component={DetectionResultScreen}

@@ -22,29 +22,20 @@ import { LinearGradient } from 'expo-linear-gradient';
 import * as Animatable from 'react-native-animatable';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useRoute } from '@react-navigation/native';
-import * as FileSystem from 'expo-file-system';
+import type { StackNavigationProp, StackScreenProps } from '@react-navigation/stack';
 
 import { theme } from '../theme/theme';
+import { RootStackParamList, DetectionResult } from '../types';
 
 const { width } = Dimensions.get('window');
 
-interface DetectionResult {
-  class: string;
-  confidence: number;
-  severity: string;
-  treatment: string;
-}
-
-interface RouteParams {
-  image: string;
-  result: DetectionResult;
-  fromHistory?: boolean;
-}
+type DetectionResultScreenNavigationProp = StackNavigationProp<RootStackParamList, 'DetectionResult'>;
+type DetectionResultScreenProps = StackScreenProps<RootStackParamList, 'DetectionResult'>;
 
 const DetectionResultScreen: React.FC = () => {
-  const navigation = useNavigation();
-  const route = useRoute();
-  const { image, result, fromHistory } = route.params as RouteParams;
+  const navigation = useNavigation<DetectionResultScreenNavigationProp>();
+  const route = useRoute<DetectionResultScreenProps['route']>();
+  const { image, result, fromHistory } = route.params;
   
   const [showFullTreatment, setShowFullTreatment] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -125,11 +116,11 @@ Detected using AI-powered Maize Disease Detection App`,
   };
 
   const handleNewScan = () => {
-    navigation.navigate('Camera' as never);
+    navigation.navigate('Camera');
   };
 
   const handleViewHistory = () => {
-    navigation.navigate('History' as never);
+    navigation.navigate('History');
   };
 
   return (
