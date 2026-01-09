@@ -103,8 +103,13 @@ const CameraScreen: React.FC = () => {
         name: 'maize_leaf.jpg',
       } as any);
 
+      // Set confidence threshold for better precision (lower = more sensitive)
+      formData.append('confidence', '0.15');
+
+      console.log('Sending image to backend for analysis...');
+
       // Call the FastAPI backend
-      const response = await fetch('http://10.0.2.2:8000/detect', {
+      const response = await fetch('http://localhost:8000/detect', {
         method: 'POST',
         body: formData,
         headers: {
@@ -112,67 +117,101 @@ const CameraScreen: React.FC = () => {
         },
       });
 
+      console.log('Response status:', response.status);
+
       if (response.ok) {
         const result = await response.json();
+        console.log('Detection result:', result);
         
         if (result.detailed_predictions && result.detailed_predictions.length > 0) {
-          const prediction = result.detailed_predictions[0];
-          setDetectionResult({
-            class: prediction.class,
-            confidence: prediction.confidence * 100,
-            severity: prediction.disease_info?.severity as 'None' | 'Low' | 'Medium' | 'High' || 'None',
-            treatment: prediction.disease_info?.treatment || 'No treatment information available',
+          // Get the highest confidence prediction
+          const bestPrediction = result.detailed_predictions.reduce((prev: any, current: any) => 
+            (prev.confidence > current.confidence) ? prev : current
+          );
+          
+          const detectionResult = {
+            class: bestPrediction.class,
+            confidence: bestPrediction.confidence * 100, // Convert to percentage
+            severity: bestPrediction.disease_info?.severity as 'None' | 'Low' | 'Medium' | 'High' || 'None',
+            treatment: bestPrediction.disease_info?.treatment || 'No treatment information available',
+          };
+
+          console.log('Processed detection result:', detectionResult);
+          setDetectionResult(detectionResult);
+
+          // Navigate to results screen
+          navigation.navigate('DetectionResult', {
+            image: capturedImage,
+            result: detectionResult,
           });
         } else {
-          setDetectionResult({
+          // No diseases detected - healthy leaf
+          const healthyResult = {
             class: 'Healthy',
             confidence: 95,
             severity: 'None' as const,
             treatment: 'Continue current care practices',
+          };
+          
+          console.log('No diseases detected - healthy leaf');
+          setDetectionResult(healthyResult);
+
+          // Navigate to results screen
+          navigation.navigate('DetectionResult', {
+            image: capturedImage,
+            result: healthyResult,
           });
         }
-
-        // Navigate to results screen
-        navigation.navigate('DetectionResult', {
-          image: capturedImage,
-          result: detectionResult!,
-        });
       } else {
-        throw new Error('Detection failed');
+        const errorText = await response.text();
+        console.error('Server error:', errorText);
+        throw new Error(`Detection failed: ${response.status}`);
       }
     } catch (error) {
       console.error('Analysis error:', error);
       
-      // Mock result for demo purposes
-      const mockResults = [
-        {
-          class: 'Healthy',
-          confidence: 98.5,
-          severity: 'None' as const,
-          treatment: 'Continue current care practices',
-        },
-        {
-          class: 'Grey Leaf Spots',
-          confidence: 94.2,
-          severity: 'Medium' as const,
-          treatment: 'Apply fungicides, improve air circulation, remove infected leaves',
-        },
-        {
-          class: 'Leaf Blight',
-          confidence: 91.8,
-          severity: 'High' as const,
-          treatment: 'Apply copper-based fungicides, improve drainage, crop rotation',
-        },
-      ];
+      // Show error to user but also provide mock result for demo
+      Alert.alert(
+        'Detection Error', 
+        'Unable to connect to AI server. Using demo mode.',
+        [
+          {
+            text: 'OK',
+            onPress: () => {
+              // Provide mock result for demo purposes
+              const mockResults = [
+                {
+                  class: 'Healthy',
+                  confidence: 98.5,
+                  severity: 'None' as const,
+                  treatment: 'Continue current care practices',
+                },
+                {
+                  class: 'Grey_Leaf_Spots',
+                  confidence: 94.2,
+                  severity: 'Medium' as const,
+                  treatment: 'Apply fungicides, improve air circulation, remove infected leaves',
+                },
+                {
+                  class: 'Leaf_Blight',
+                  confidence: 91.8,
+                  severity: 'High' as const,
+                  treatment: 'Apply copper-based fungicides, improve drainage, crop rotation',
+                },
+              ];
 
-      const randomResult = mockResults[Math.floor(Math.random() * mockResults.length)];
-      setDetectionResult(randomResult);
+              const randomResult = mockResults[Math.floor(Math.random() * mockResults.length)];
+              setDetectionResult(randomResult);
 
-      // Navigate to results screen
-      navigation.navigate('DetectionResult', {
-        image: capturedImage,
-        result: randomResult,
-      });
+              // Navigate to results screen
+              navigation.navigate('DetectionResult', {
+                image: capturedImage,
+                result: randomResult,
+              });
+            }
+          }
+        ]
+      );
     } finally {
       setIsAnalyzing(false);
     }

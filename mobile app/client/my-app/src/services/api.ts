@@ -1,7 +1,7 @@
 import { DetectionApiResponse, ApiResponse, HistoryItem } from '../types';
 
 // API Configuration
-const API_BASE_URL = __DEV__ ? 'http://10.0.2.2:8000' : 'https://your-production-api.com'; // Use 10.0.2.2 for Android emulator
+const API_BASE_URL = __DEV__ ? 'http://localhost:8000' : 'https://your-production-api.com'; // Use localhost for web, 10.0.2.2 for Android emulator
 const API_TIMEOUT = 30000; // 30 seconds
 
 class ApiService {
@@ -155,12 +155,38 @@ class ApiService {
     return this.request(`/diseases/${encodeURIComponent(diseaseName)}`);
   }
 
-  // Mock authentication (since we're using dummy credentials)
+  // Mock authentication (accepts any valid email/password for demo)
   async login(email: string, password: string): Promise<ApiResponse<{ user: any; token: string }>> {
     // Simulate API delay
     await new Promise(resolve => setTimeout(resolve, 1000));
 
-    const dummyUsers = {
+    // Basic validation
+    if (!email || !password) {
+      return {
+        success: false,
+        error: 'Email and password are required',
+      };
+    }
+
+    // Simple email validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      return {
+        success: false,
+        error: 'Please enter a valid email address',
+      };
+    }
+
+    // Password validation
+    if (password.length < 6) {
+      return {
+        success: false,
+        error: 'Password must be at least 6 characters long',
+      };
+    }
+
+    // Predefined users for specific emails
+    const predefinedUsers = {
       'farmer@maize.com': {
         id: '1',
         name: 'John Farmer',
@@ -187,21 +213,34 @@ class ApiService {
       },
     };
 
-    const user = dummyUsers[email as keyof typeof dummyUsers];
-    
-    if (user && (password === 'password123' || password === 'manager123' || password === 'expert123')) {
+    // Check if it's a predefined user
+    const predefinedUser = predefinedUsers[email as keyof typeof predefinedUsers];
+    if (predefinedUser) {
       return {
         success: true,
         data: {
-          user,
+          user: predefinedUser,
           token: 'dummy_jwt_token_' + Date.now(),
         },
       };
     }
 
+    // For any other valid email/password combination, create a generic user
+    const genericUser = {
+      id: Date.now().toString(),
+      name: email.split('@')[0].charAt(0).toUpperCase() + email.split('@')[0].slice(1),
+      email: email,
+      farmName: 'My Farm',
+      role: 'farmer' as const,
+      avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&h=150&fit=crop&crop=face',
+    };
+
     return {
-      success: false,
-      error: 'Invalid credentials',
+      success: true,
+      data: {
+        user: genericUser,
+        token: 'dummy_jwt_token_' + Date.now(),
+      },
     };
   }
 

@@ -34,8 +34,8 @@ interface AuthScreenProps {
 
 const AuthScreen: React.FC<AuthScreenProps> = ({ onLogin }) => {
   const [isLogin, setIsLogin] = useState(true);
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const [email, setEmail] = useState('test@example.com');
+  const [password, setPassword] = useState('password123');
   const [name, setName] = useState('');
   const [farmName, setFarmName] = useState('');
   const [loading, setLoading] = useState(false);
@@ -45,15 +45,30 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onLogin }) => {
     
     try {
       if (isLogin) {
+        // Simple validation for login
+        if (!email || !password) {
+          Alert.alert('Login Failed', 'Please enter both email and password.');
+          setLoading(false);
+          return;
+        }
+
         // Use API service for login
         const response = await apiService.login(email, password);
         
         if (response.success && response.data) {
+          console.log('Login successful:', response.data.user);
           onLogin(response.data.user);
         } else {
-          Alert.alert('Login Failed', response.error || 'Invalid credentials. Check README.md for demo accounts.');
+          Alert.alert('Login Failed', response.error || 'Invalid credentials. Please try again.');
         }
       } else {
+        // Simple validation for registration
+        if (!email || !password) {
+          Alert.alert('Registration Failed', 'Please enter both email and password.');
+          setLoading(false);
+          return;
+        }
+
         // Use API service for registration
         const response = await apiService.register({
           name: name || 'New Farmer',
@@ -63,12 +78,14 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onLogin }) => {
         });
         
         if (response.success && response.data) {
+          console.log('Registration successful:', response.data.user);
           onLogin(response.data.user);
         } else {
           Alert.alert('Registration Failed', response.error || 'Failed to create account.');
         }
       }
     } catch (error) {
+      console.error('Auth error:', error);
       Alert.alert('Error', 'Network error. Please check your connection.');
     } finally {
       setLoading(false);
@@ -207,6 +224,22 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onLogin }) => {
                 >
                   {isLogin ? 'Sign In & Start Detecting' : '🌱 Create Account'}
                 </Button>
+
+                {/* Quick Test Login */}
+                {isLogin && (
+                  <Button
+                    mode="outlined"
+                    onPress={() => {
+                      setEmail('test@example.com');
+                      setPassword('password123');
+                      setTimeout(handleAuth, 100);
+                    }}
+                    style={styles.quickLoginButton}
+                    textColor={theme.colors.primary}
+                  >
+                    Quick Test Login
+                  </Button>
+                )}
               </Card.Content>
             </Card>
           </Animatable.View>
@@ -321,30 +354,18 @@ const styles = StyleSheet.create({
     marginBottom: 15,
     backgroundColor: 'rgba(255, 255, 255, 0.9)',
   },
-  demoTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: theme.colors.primary,
-    marginBottom: 15,
-    textAlign: 'center',
-  },
-  demoNote: {
-    fontSize: 14,
-    color: '#666',
-    textAlign: 'center',
-    fontStyle: 'italic',
-    backgroundColor: 'rgba(46, 139, 87, 0.05)',
-    padding: 15,
-    borderRadius: 10,
-    marginBottom: 20,
-  },
   authButton: {
     borderRadius: 25,
-    marginBottom: 25,
+    marginBottom: 15,
     backgroundColor: theme.colors.primary,
   },
   authButtonContent: {
     paddingVertical: 8,
+  },
+  quickLoginButton: {
+    borderRadius: 25,
+    marginBottom: 25,
+    borderColor: theme.colors.primary,
   },
   featuresContainer: {
     marginTop: 10,

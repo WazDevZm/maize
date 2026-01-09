@@ -106,8 +106,11 @@ export default function App(): React.JSX.Element {
   const [user, setUser] = useState<User | null>(null);
 
   const handleLogin = (userData: User) => {
+    console.log('App: User logged in:', userData);
     setUser(userData);
   };
+
+  console.log('App: Current user state:', user);
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>

@@ -79,18 +79,17 @@ def load_model():
     """Load the YOLO model with comprehensive error handling"""
     global model
     try:
-        # Try to load the trained model
+        # Prioritize the trained best.pt model
         model_paths = [
             Path("best.pt"),
             Path("../maize_disease_app/best.pt"),
             Path("../../maize_disease_app/best.pt"),
-            Path("yolov8n.pt")
         ]
         
         model_loaded = False
         for model_path in model_paths:
             if model_path.exists():
-                logger.info(f"Loading model from: {model_path}")
+                logger.info(f"Loading trained model from: {model_path}")
                 
                 try:
                     # Strategy 1: Try with DFLoss compatibility fix
@@ -117,88 +116,53 @@ def load_model():
                         model = YOLO(str(model_path))
                         torch.load = original_load  # Restore original
                         
-                        # Set correct class names for our custom model
-                        if str(model_path).endswith('best.pt'):
-                            # This is our trained model
-                            model.model.names = {
-                                0: 'Health',
-                                1: 'Grey_Leaf_Spots',
-                                2: 'Leaf_Blight',
-                                3: 'MSV'
-                            }
+                        # Verify this is our trained model by checking class names
+                        if hasattr(model, 'names') and len(model.names) == 4:
+                            logger.info(f"✅ Trained model loaded successfully from: {model_path}")
+                            logger.info(f"Model classes: {model.names}")
+                            model_loaded = True
+                            break
                         else:
-                            # This is base YOLOv8 - create demo version
+                            # Set correct class names for our custom model
                             model.model.names = {
                                 0: 'Health',
                                 1: 'Grey_Leaf_Spots',
                                 2: 'Leaf_Blight',
                                 3: 'MSV'
                             }
-                        
-                        logger.info(f"✅ Model loaded successfully from: {model_path}")
-                        logger.info(f"Model classes: {model.model.names}")
-                        model_loaded = True
-                        break
+                            logger.info(f"✅ Trained model loaded and configured from: {model_path}")
+                            logger.info(f"Model classes: {model.model.names}")
+                            model_loaded = True
+                            break
                         
                     except Exception as load_error:
                         torch.load = original_load  # Restore original
                         raise load_error
                     
                 except Exception as e:
-                    logger.warning(f"Failed to load model from {model_path}: {e}")
+                    logger.warning(f"Failed to load trained model from {model_path}: {e}")
                     continue
         
+        # Only fall back to base model if trained model fails
         if not model_loaded:
-            # Create a mock model for demonstration
-            logger.warning("Creating mock model for demonstration...")
+            logger.warning("Trained model not available, falling back to base YOLOv8...")
             try:
-                class MockYOLO:
-                    def __init__(self):
-                        self.model = self
-                        self.names = {
-                            0: 'Health',
-                            1: 'Grey_Leaf_Spots',
-                            2: 'Leaf_Blight',
-                            3: 'MSV'
-                        }
-                    
-                    def __call__(self, image, conf=0.25, verbose=False):
-                        # Return mock results for demonstration
-                        import random
-                        
-                        class MockResult:
-                            def __init__(self):
-                                self.boxes = MockBoxes()
-                        
-                        class MockBoxes:
-                            def __init__(self):
-                                # Generate random mock detection
-                                num_detections = random.randint(0, 2)
-                                if num_detections > 0:
-                                    self.cls = torch.tensor([random.randint(0, 3) for _ in range(num_detections)])
-                                    self.conf = torch.tensor([random.uniform(0.5, 0.95) for _ in range(num_detections)])
-                                else:
-                                    self.cls = torch.tensor([])
-                                    self.conf = torch.tensor([])
-                            
-                            def cpu(self):
-                                return self
-                            
-                            def numpy(self):
-                                return self
-                            
-                            def __len__(self):
-                                return len(self.cls)
-                        
-                        return [MockResult()]
-                
-                model = MockYOLO()
-                logger.warning("⚠️ Using mock model for demonstration purposes")
-                logger.info("🎭 This model generates random results for UI testing")
-                return True
-                
+                base_model_path = Path("yolov8n.pt")
+                if base_model_path.exists():
+                    model = YOLO(str(base_model_path))
+                    # Configure for our classes (this won't have trained weights)
+                    model.model.names = {
+                        0: 'Health',
+                        1: 'Grey_Leaf_Spots',
+                        2: 'Leaf_Blight',
+                        3: 'MSV'
+                    }
+                    logger.warning("⚠️ Using base YOLOv8n model - predictions may be inaccurate")
+                    model_loaded = True
+                else:
+                    raise FileNotFoundError("No model files found")
             except Exception as e:
-                logger.error(f"❌ Mock model creation failed: {e}")
+                logger.error(f"Base model loading failed: {e}")
                 return False
             
         return True
@@ -229,13 +193,13 @@ def preprocess_image(image_bytes: bytes) -> np.ndarray:
         logger.error(f"Image preprocessing error: {e}")
         raise HTTPException(status_code=400, detail=f"Invalid image format: {e}")
 
-def predict_disease(img_array: np.ndarray, confidence_threshold: float = 0.25) -> Dict[str, Any]:
-    """Run disease prediction on the image"""
+def predict_disease(img_array: np.ndarray, confidence_threshold: float = 0.15) -> Dict[str, Any]:
+    """Run disease prediction on the image with optimized confidence"""
     try:
         if model is None:
             raise HTTPException(status_code=500, detail="Model not loaded")
         
-        # Run inference
+        # Run inference with lower confidence threshold for better sensitivity
         results = model(img_array, conf=confidence_threshold, verbose=False)
         result = results[0]
         
@@ -269,21 +233,45 @@ def predict_disease(img_array: np.ndarray, confidence_threshold: float = 0.25) -
                     'disease_info': DISEASE_INFO.get(class_name, {}),
                     'timestamp': datetime.now().isoformat()
                 })
+            
+            # Sort predictions by confidence (highest first)
+            predictions.sort(key=lambda x: x['confidence'], reverse=True)
+        
+        # Determine health status based on predictions
+        if not predictions:
+            health_status = 'Healthy'
+            severity = 'None'
+        elif len(predictions) == 1 and predictions[0]['class'] == 'Health':
+            health_status = 'Healthy'
+            severity = 'None'
+        else:
+            # Find the highest confidence non-health prediction
+            disease_predictions = [p for p in predictions if p['class'] != 'Health']
+            if disease_predictions:
+                best_disease = disease_predictions[0]
+                health_status = f'Disease detected: {best_disease["class"]}'
+                severity = DISEASE_INFO.get(best_disease['class'], {}).get('severity', 'Unknown')
+            else:
+                health_status = 'Healthy'
+                severity = 'None'
         
         # Create response
         response = {
             'success': True,
             'predictions_count': len(predictions),
             'detailed_predictions': predictions,
-            'health_status': 'Healthy' if not predictions or (len(predictions) == 1 and predictions[0]['class'] == 'Health') else 'Disease Detected',
+            'health_status': health_status,
+            'severity': severity,
             'timestamp': datetime.now().isoformat(),
             'model_info': {
                 'model_type': 'YOLOv8',
                 'classes': model_names if 'model_names' in locals() else {},
-                'confidence_threshold': confidence_threshold
+                'confidence_threshold': confidence_threshold,
+                'model_path': 'best.pt' if hasattr(model, 'model') else 'unknown'
             }
         }
         
+        logger.info(f"Prediction completed: {len(predictions)} detections, health_status: {health_status}")
         return response
         
     except Exception as e:
@@ -323,7 +311,7 @@ async def health_check():
 @app.post("/detect")
 async def detect_disease(
     file: UploadFile = File(...),
-    confidence: float = Form(0.25)
+    confidence: float = Form(0.15)  # Lower default confidence for better sensitivity
 ):
     """
     Detect diseases in a single maize leaf image
@@ -336,13 +324,16 @@ async def detect_disease(
         # Read image bytes
         image_bytes = await file.read()
         
+        # Log image info
+        logger.info(f"Processing image: {file.filename}, size: {len(image_bytes)} bytes, confidence: {confidence}")
+        
         # Preprocess image
         img_array = preprocess_image(image_bytes)
         
         # Run prediction
         result = predict_disease(img_array, confidence)
         
-        logger.info(f"Detection completed for {file.filename}")
+        logger.info(f"Detection completed for {file.filename}: {result['predictions_count']} predictions")
         return JSONResponse(content=result)
         
     except HTTPException:
