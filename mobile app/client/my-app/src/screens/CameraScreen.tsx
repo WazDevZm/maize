@@ -17,6 +17,7 @@ import {
   Chip,
   IconButton,
 } from 'react-native-paper';
+import Slider from '@react-native-community/slider';
 import { Camera, CameraView, CameraType, FlashMode } from 'expo-camera';
 import * as ImagePicker from 'expo-image-picker';
 import * as FileSystem from 'expo-file-system';
@@ -44,13 +45,39 @@ const CameraScreen: React.FC = () => {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [detectionResult, setDetectionResult] = useState<DetectionResult | null>(null);
   const [showCamera, setShowCamera] = useState(true);
+  const [confidenceLevel, setConfidenceLevel] = useState(0.7); // High confidence for accurate predictions
+  const [serverConnected, setServerConnected] = useState<boolean | null>(null);
 
   useEffect(() => {
     (async () => {
       const { status } = await Camera.requestCameraPermissionsAsync();
       setHasPermission(status === 'granted');
     })();
+    
+    // Test server connection
+    testServerConnection();
   }, []);
+
+  const testServerConnection = async () => {
+    try {
+      const response = await fetch('http://localhost:8000/health', {
+        method: 'GET',
+        timeout: 5000,
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        console.log('Server connection successful:', data);
+        setServerConnected(true);
+      } else {
+        console.log('Server connection failed:', response.status);
+        setServerConnected(false);
+      }
+    } catch (error) {
+      console.log('Server connection error:', error);
+      setServerConnected(false);
+    }
+  };
 
   const takePicture = async () => {
     if (cameraRef.current) {
@@ -103,8 +130,8 @@ const CameraScreen: React.FC = () => {
         name: 'maize_leaf.jpg',
       } as any);
 
-      // Set confidence threshold for better precision (lower = more sensitive)
-      formData.append('confidence', '0.15');
+      // Set confidence threshold from slider (convert to 0-1 range)
+      formData.append('confidence', confidenceLevel.toString());
 
       console.log('Sending image to backend for analysis...');
 
@@ -274,8 +301,27 @@ const CameraScreen: React.FC = () => {
             size={24}
             onPress={() => navigation.goBack()}
           />
-          <Text style={styles.headerTitle}>Disease Detection</Text>
-          <View style={styles.headerRight} />
+          <View style={styles.headerCenter}>
+            <Text style={styles.headerTitle}>Disease Detection</Text>
+            {/* Server Status Indicator */}
+            <View style={styles.serverStatus}>
+              <View 
+                style={[
+                  styles.statusDot, 
+                  { backgroundColor: serverConnected === true ? '#28a745' : serverConnected === false ? '#dc3545' : '#ffc107' }
+                ]} 
+              />
+              <Text style={styles.statusText}>
+                {serverConnected === true ? 'AI Connected' : serverConnected === false ? 'AI Offline' : 'Connecting...'}
+              </Text>
+            </View>
+          </View>
+          <IconButton
+            icon="refresh"
+            iconColor="white"
+            size={20}
+            onPress={testServerConnection}
+          />
         </View>
       </LinearGradient>
 
@@ -380,6 +426,31 @@ const CameraScreen: React.FC = () => {
                 Ready to analyze for disease detection
               </Text>
               
+              {/* Confidence Level Slider */}
+              <View style={styles.confidenceContainer}>
+                <Text style={styles.confidenceLabel}>
+                  Confidence Level: {Math.round(confidenceLevel * 100)}%
+                </Text>
+                <Text style={styles.confidenceDescription}>
+                  Higher values = more accurate but may miss subtle diseases
+                </Text>
+                <Slider
+                  style={styles.confidenceSlider}
+                  minimumValue={0.1}
+                  maximumValue={0.9}
+                  value={confidenceLevel}
+                  onValueChange={setConfidenceLevel}
+                  minimumTrackTintColor={theme.colors.primary}
+                  maximumTrackTintColor="#d3d3d3"
+                  thumbStyle={styles.sliderThumb}
+                  trackStyle={styles.sliderTrack}
+                />
+                <View style={styles.confidenceLabels}>
+                  <Text style={styles.confidenceLabelText}>More Sensitive</Text>
+                  <Text style={styles.confidenceLabelText}>More Precise</Text>
+                </View>
+              </View>
+              
               <View style={styles.actionButtons}>
                 <Button
                   mode="outlined"
@@ -406,7 +477,7 @@ const CameraScreen: React.FC = () => {
                 <View style={styles.analyzingContainer}>
                   <ActivityIndicator size="small" color={theme.colors.primary} />
                   <Text style={styles.analyzingText}>
-                    AI is analyzing your image...
+                    AI is analyzing your image with {Math.round(confidenceLevel * 100)}% confidence threshold...
                   </Text>
                 </View>
               )}
@@ -467,10 +538,29 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
   },
+  headerCenter: {
+    flex: 1,
+    alignItems: 'center',
+  },
   headerTitle: {
     color: 'white',
     fontSize: 20,
     fontWeight: 'bold',
+  },
+  serverStatus: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 4,
+  },
+  statusDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    marginRight: 6,
+  },
+  statusText: {
+    color: 'rgba(255, 255, 255, 0.9)',
+    fontSize: 12,
   },
   headerRight: {
     width: 40,
@@ -646,6 +736,45 @@ const styles = StyleSheet.create({
   },
   actionButton: {
     flex: 1,
+  },
+  confidenceContainer: {
+    marginVertical: 20,
+    paddingHorizontal: 10,
+  },
+  confidenceLabel: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#333',
+    textAlign: 'center',
+    marginBottom: 5,
+  },
+  confidenceDescription: {
+    fontSize: 12,
+    color: '#666',
+    textAlign: 'center',
+    marginBottom: 15,
+  },
+  confidenceSlider: {
+    width: '100%',
+    height: 40,
+  },
+  sliderThumb: {
+    backgroundColor: theme.colors.primary,
+    width: 20,
+    height: 20,
+  },
+  sliderTrack: {
+    height: 4,
+    borderRadius: 2,
+  },
+  confidenceLabels: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 5,
+  },
+  confidenceLabelText: {
+    fontSize: 10,
+    color: '#999',
   },
   analyzingContainer: {
     flexDirection: 'row',

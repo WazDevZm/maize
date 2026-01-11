@@ -57,7 +57,9 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onLogin }) => {
         
         if (response.success && response.data) {
           console.log('Login successful:', response.data.user);
+          console.log('Calling onLogin callback...');
           onLogin(response.data.user);
+          console.log('onLogin callback completed');
         } else {
           Alert.alert('Login Failed', response.error || 'Invalid credentials. Please try again.');
         }

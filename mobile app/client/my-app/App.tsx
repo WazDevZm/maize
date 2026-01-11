@@ -2,10 +2,11 @@ import React, { useState } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createStackNavigator } from '@react-navigation/stack';
-import { Provider as PaperProvider } from 'react-native-paper';
+import { Provider as PaperProvider, Text } from 'react-native-paper';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { View } from 'react-native';
 
 // Import screens
 import {
@@ -26,6 +27,8 @@ const Tab = createBottomTabNavigator();
 const Stack = createStackNavigator();
 
 function MainTabs({ user }: { user: User | null }): React.JSX.Element {
+  console.log('MainTabs: Rendering with user:', user);
+  
   return (
     <Tab.Navigator
       screenOptions={({ route }: { route: any }) => ({
@@ -75,7 +78,10 @@ function MainTabs({ user }: { user: User | null }): React.JSX.Element {
         name="Home" 
         options={{ tabBarLabel: 'Dashboard' }}
       >
-        {() => <HomeScreen user={user} />}
+        {() => {
+          console.log('Home tab: Rendering HomeScreen with user:', user);
+          return <HomeScreen user={user} />;
+        }}
       </Tab.Screen>
       <Tab.Screen 
         name="FarmTracker" 
@@ -104,13 +110,35 @@ function MainTabs({ user }: { user: User | null }): React.JSX.Element {
 
 export default function App(): React.JSX.Element {
   const [user, setUser] = useState<User | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
 
   const handleLogin = (userData: User) => {
     console.log('App: User logged in:', userData);
-    setUser(userData);
+    setIsLoading(true);
+    
+    // Add a small delay to ensure state updates properly
+    setTimeout(() => {
+      setUser(userData);
+      setIsLoading(false);
+      console.log('App: Navigation should now show main screens');
+    }, 100);
   };
 
   console.log('App: Current user state:', user);
+  console.log('App: Is loading:', isLoading);
+
+  // Show loading screen during transition
+  if (isLoading) {
+    return (
+      <GestureHandlerRootView style={{ flex: 1 }}>
+        <PaperProvider theme={theme}>
+          <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: theme.colors.primary }}>
+            <Text style={{ color: 'white', fontSize: 18, marginBottom: 20 }}>Loading Dashboard...</Text>
+          </View>
+        </PaperProvider>
+      </GestureHandlerRootView>
+    );
+  }
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
